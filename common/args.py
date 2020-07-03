@@ -75,6 +75,10 @@ def stateplot():
 
     args = vars(parser.parse_args())
 
+    print(args['states'])
+    args['states'] = [ x.upper() for x in args['states'] ]
+    print(args['states'])
+
     for state in args['states']:
         if state not in states.abbrev_us_state:
             sys.exit("\n{} is not a recognized state postal code\n".format(state))
