@@ -43,7 +43,7 @@ def get_data( max_age = 1 ):
     # No? Download new data
 
     max_weekly = 0
-    totals = dict()  # daily totals profile indexed by state
+    daily  = dict()  # daily totals profile indexed by state
     weekly = dict()  # weekly totals profile indexed by state
     total  = dict()  # total cases indexd by state
 
@@ -69,7 +69,7 @@ def get_data( max_age = 1 ):
         nraw   = ndays + 1
 
         # strip down dates to 1 per week
-        dates = dates[-ndays:].reshape(-1,7)[:,6]
+        weeks = dates[-ndays:].reshape(-1,7)[:,6]
 
         # add up all counties in state (filtering "non-states")
         for row in reader:
@@ -77,17 +77,18 @@ def get_data( max_age = 1 ):
             if state not in states.us_state_abbrev: 
                 continue
             data = np.array(row[-nraw:],dtype=int)
-            if state in totals:
-                totals[state] = np.add(totals[state], data)
+            if state in daily:
+                daily[state] = np.add(daily[state], data)
             else:
-                totals[state] = data
+                daily[state] = data
 
-    for state,data in totals.items():
+    for state,data in daily.items():
         total[state] = data[-1]
 
-        daily = ( data[1:] - data[:-1] ).reshape(-1,7) # by weeks
+        daily[state] = data[1:] - data[:-1]
+        daily_by_week = ( data[1:] - data[:-1] ).reshape(-1,7) # by weeks
 
-        weekly[state] = np.sum(daily,axis=1)
+        weekly[state] = np.sum(daily_by_week,axis=1)
 
         t = max( weekly[state] )
         if t > max_weekly:
@@ -97,6 +98,8 @@ def get_data( max_age = 1 ):
         'timestamp' : time.time() ,
         'dates'     : dates,
         'total'     : total,
+        'daily'     : daily,
+        'weeks'     : weeks,
         'weekly'    : weekly,
         'max'       : max_weekly,
         }

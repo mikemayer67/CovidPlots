@@ -5,7 +5,7 @@ This file can be imported and contains the following functions:
 
     * stackplot - supports stackplot.py
     * stateplot - supports stateplot.py
-    * stategif  - supports stategif.py
+    * mapplot   - supports mapplot.py
 
     * filename  - returns plot filename
 """
@@ -49,6 +49,8 @@ def stateplot():
         reversed: (true|false)
         win:      (true|false)
         reload:   (true|false)
+        commonY:  (true|false)
+        logY:     (true|false)
         output:   filename     [optional]
     """
 
@@ -71,19 +73,53 @@ def stateplot():
             help = "Use resscale Y axis for each state")
 
     parser.set_defaults(sort='current', reversed=False, win=False, reload=False,
-            commonY=True)
+            logY=False,commonY=True)
 
     args = vars(parser.parse_args())
 
-    print(args['states'])
     args['states'] = [ x.upper() for x in args['states'] ]
-    print(args['states'])
 
     for state in args['states']:
         if state not in states.abbrev_us_state:
             sys.exit("\n{} is not a recognized state postal code\n".format(state))
 
     return args
+
+
+def mapplot():
+    """
+    Command line parser for stackplot.py
+
+    returns dictionary with values:
+        average:  (1-7)      [default=7]
+        win:      (true|false)
+        reload:   (true|false)
+        commonY:  (true|false)
+        output:   filename     [optional]
+    """
+
+    parser = argparse.ArgumentParser(
+        description = "Plots COVID cases in the JHU database in a pseudo-US map"
+        )
+
+    parser.add_argument('-n','--average', type=int, choices=[1,2,3,4,5,6,7], default=7)
+
+    parser.add_argument('-y','--scale', choices=['common','per_capita','by_state'], default='common')
+
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument('-o','--output', nargs=1, metavar='filename',
+            help = "Name of file to save generated plot")
+    output.add_argument('-s','--show', dest='win', action='store_true',
+            help = "Show the plot in popup window")
+
+    parser.add_argument('-r','--reload', action='store_true',
+            help = "Do not use cached data")
+
+    parser.set_defaults(win=False, reload=False)
+
+    args = vars(parser.parse_args())
+    return args
+
 
 
 def add_common(parser):
@@ -105,7 +141,7 @@ def add_common(parser):
     output.add_argument('-s','--show', dest='win', action='store_true',
             help = "Show the plot in popup window")
 
-    output.add_argument('-r','--reload', action='store_true',
+    parser.add_argument('-r','--reload', action='store_true',
             help = "Do not use cached data")
 
 
@@ -148,8 +184,9 @@ def filename(args,plot_type,state=None):
         if args.get('logY',False):
             filename.append('log')
 
-        if not args.get('commonY',True):
-            filename.append('rescaled')
+        if 'commonY' in args:
+            if not args['commonY']:
+                filename.append('rescaled')
 
         if state is not None:
             filename.append(state)

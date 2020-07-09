@@ -29,7 +29,7 @@ else:
         ) ]
     title = "States ordered by Total Cases to Date"
 
-weeks = data['dates']
+weeks = data['weeks']
 cases = [ data['weekly'][state] for state in states ]
 
 if args['win']:
