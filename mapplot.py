@@ -34,23 +34,26 @@ plot_map = np.array( [
 max_Y = 0
 
 for state in daily.keys():
+    raw = daily[state]
+
     if num_avg > 1:
-        raw = daily[state]
         state_data = np.zeros([num_avg,raw.size + num_avg-1])
         for i in range(num_avg):
             state_data[i,i:i+raw.size] = raw
         state_data = sum(state_data)
         state_data = state_data[num_avg-1:raw.size]/num_avg
+    else:
+        state_data = raw
 
-        if( args['scale'] == 'per_capita' ):
-            pop = states.us_state_population[state]
-            state_data = state_data / pop
-            
-        daily[state] = state_data
+    if( args['scale'] == 'per_capita' ):
+        pop = states.us_state_population[state]
+        state_data = state_data / pop
+        
+    daily[state] = state_data
 
-        max_y = max(state_data)
-        if max_y > max_Y:
-            max_Y = max_y
+    max_y = max(state_data)
+    if max_y > max_Y:
+        max_Y = max_y
 
 if args['win']:
     plt.ion()
