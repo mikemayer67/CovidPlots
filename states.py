@@ -4,24 +4,69 @@ Plot weekly COVID cases as series of bar graphs
 """
 
 import common.args as cargs
-import common.jsu_data as jsu
+import common.jhu_data as jhu
 import common.states as states
 import common.util as cu
+import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import sys
 
-args = cargs.stateplot()
+# Command Line Parser
+#    Command line parser for stateplot.py
+#
+#    returns dictionary with values:
+#        sort:     (total|current)
+#        reversed: (true|false)
+#        win:      (true|false)
+#        reload:   (true|false)
+#        commonY:  (true|false)
+#        logY:     (true|false)
+#        output:   filename     [optional]
+
+parser = argparse.ArgumentParser(
+    description = "Plots COVID cases in the JHU database as a sereis bar charts",
+    epilog = "XXX in a filename will be replaced by state's postal code"
+    )
+
+cargs.add_common(parser)
+
+parser.add_argument('states',nargs=argparse.REMAINDER)
+
+parser.add_argument('-l','--logY', action='store_true',
+        help = "Plot weekly counts on a log scale")
+
+common_y = parser.add_mutually_exclusive_group()
+common_y.add_argument('-y','--commonY', dest='commonY', action='store_true',
+        help = "Use same Y axis for all states")
+common_y.add_argument('-Y','--rescaleY', dest='commonY', action='store_false',
+        help = "Use resscale Y axis for each state")
+
+parser.set_defaults(sort='current', reversed=False, win=False, reload=False,
+        logY=False,commonY=True)
+
+args = vars(parser.parse_args())
+
+args['states'] = [ x.upper() for x in args['states'] ]
+
+for state in args['states']:
+    if state not in states.abbrev_us_state:
+        sys.exit("\n{} is not a recognized state postal code\n".format(state))
+
+# JHU data
 
 max_age = 0 if args['reload'] else 1
-data = jsu.get_data(max_age)
-
-weekly = data['weekly']
-total = data['total']
+data = jhu.get_data(max_age)
+sd   = data['state']
 
 if len(args['states']) > 0:
-    weekly = { k:v for (k,v) in weekly.items() if states.us_state_abbrev[k] in args['states'] }
-    total = { k:v for (k,v) in total.items() if states.us_state_abbrev[k] in args['states'] }
+    states = args['states']
+else:
+    states = sd.keys()
+
+weekly = { state:sd[state]['weekly'] for state in states }
+total  = { state:sd[state]['total']  for state in states }
 
 if args['sort'] == 'current':
     states = [ x[0] for x in 

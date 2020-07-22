@@ -4,33 +4,46 @@ Plot weekly COVID cases in a stackeplot by state
 """
 
 import common.args as cargs
-import common.jsu_data as jsu
+import common.jhu_data as jhu
+import argparse
 import matplotlib.pyplot as plt
 
-args = cargs.stackplot()
+# Command Line Parser
+
+parser = argparse.ArgumentParser(
+        description = "Plots COVID cases in the JHU database as a stackplot of states"
+        )
+
+cargs.add_common(parser)
+
+parser.set_defaults(sort='current', reversed=False, win=False, reload=False)
+
+args = vars(parser.parse_args())
+
+# JHU data
 
 max_age = 0 if args['reload'] else 1
-data = jsu.get_data(max_age)
+data = jhu.get_data(max_age)
+
+sd = data['state']
 
 if args['sort'] == 'current':
-    states = [ x[0] for x in 
-        sorted( 
-        data['weekly'].items(),
-        key = lambda x: x[1][-1],
-        reverse = args['reversed']
-        ) ]
+    states = sorted( 
+            sd, 
+            key=lambda x: sd[x]['weekly'][-1],
+            reverse = args['reversed']
+            )
     title = "States ordered by Most Recent Week's Cases"
 else:
-    states = [ x[0] for x in 
-        sorted( 
-        data['total'].items(),
-        key = lambda x: x[1],
-        reverse = args['reversed']
-        ) ]
+    states = sorted( 
+            sd,
+            key=lambda x: sd[x]['total'],
+            reverse = args['reversed']
+            )
     title = "States ordered by Total Cases to Date"
 
 weeks = data['weeks']
-cases = [ data['weekly'][state] for state in states ]
+cases = [ sd[state]['weekly'] for state in states ]
 
 if args['win']:
     plt.ion()

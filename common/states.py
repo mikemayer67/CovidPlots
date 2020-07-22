@@ -123,3 +123,5 @@ us_state_population = {
     'Wyoming': 578759,
     'Puerto Rico': 3193694
 }
+
+abbrev_population = { us_state_abbrev[k]:v for (k,v) in us_state_population.items() }

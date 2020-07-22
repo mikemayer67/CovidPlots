@@ -4,22 +4,54 @@ Plot COVID cases in a pseudo-US map
 """
 
 import common.args as cargs
-import common.jsu_data as jsu
+import common.jhu_data as jhu
 import common.states as states
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
 
-args = cargs.mapplot()
+# Command Line Parser
+# 
+# returns dictionary with values:
+#     average:  (1-7)      [default=7]
+#     win:      (true|false)
+#     reload:   (true|false)
+#     commonY:  (true|false)
+#     output:   filename     [optional]
+#
+
+parser = argparse.ArgumentParser(
+    description = "Plots COVID cases in the JHU database in a pseudo-US map"
+    )
+
+parser.add_argument('-n','--average', type=int, choices=[1,2,3,4,5,6,7], default=7)
+
+parser.add_argument('-y','--scale', choices=['common','per_capita','by_state'], default='common')
+
+output = parser.add_mutually_exclusive_group()
+output.add_argument('-o','--output', nargs=1, metavar='filename',
+        help = "Name of file to save generated plot")
+output.add_argument('-s','--show', dest='win', action='store_true',
+        help = "Show the plot in popup window")
+
+parser.add_argument('-r','--reload', action='store_true',
+        help = "Do not use cached data")
+
+parser.set_defaults(win=False, reload=False)
+
+args = vars(parser.parse_args())
+
+# JHU data
 
 num_avg = args['average']
 
 max_age = 0 if args['reload'] else 1
-data = jsu.get_data(max_age)
+data = jhu.get_data(max_age)
 
 dates = data['dates']
-daily = data['daily']
+sd    = data['state']
 
 plot_map = np.array( [
     ['AK',''  ,''  ,''  ,''  ,'WI',''  ,''  ,'VT','NH','ME'],
@@ -33,8 +65,8 @@ plot_map = np.array( [
 
 max_Y = 0
 
-for state in daily.keys():
-    raw = daily[state]
+for state in sd.keys():
+    raw = sd[state]['daily']
 
     if num_avg > 1:
         state_data = np.zeros([num_avg,raw.size + num_avg-1])
@@ -46,14 +78,12 @@ for state in daily.keys():
         state_data = raw
 
     if( args['scale'] == 'per_capita' ):
-        pop = states.us_state_population[state]
+        pop = states.abbrev_population[state]
         state_data = state_data / pop
         
-    daily[state] = state_data
+    sd[state]['daily'] = state_data
 
-    max_y = max(state_data)
-    if max_y > max_Y:
-        max_Y = max_y
+    max_Y = max(max_Y, max(state_data))
 
 if args['win']:
     plt.ion()
@@ -64,30 +94,25 @@ x_formatter = mdates.DateFormatter('%m/%d')
 nrow, ncol = plot_map.shape
 fig, axs = plt.subplots(nrow, ncol)
 
-for state in daily.keys():
-    for row in range(nrow):
-        for col in range(ncol):
-            abbrev = plot_map[row,col]
-            if abbrev not in states.abbrev_us_state:
-                axs[row][col].axis('off')
-                continue
-            state = states.abbrev_us_state[abbrev]
-            if state not in daily:
-                axs[row][col].axis('off')
-                continue
+for row in range(nrow):
+    for col in range(ncol):
+        state = plot_map[row,col]
+        if state not in states.abbrev_us_state:
+            axs[row][col].axis('off')
+            continue
 
-            y_values = daily[state]
+        y_values = sd[state]['daily']
 
-            if args['scale'] == 'by_state':
-                max_y = max(y_values)
-            else:
-                max_y = max_Y
+        if args['scale'] == 'by_state':
+            max_y = max(y_values)
+        else:
+            max_y = max_Y
 
-            axs[row,col].plot(x_values[-y_values.size:],daily[state])
-            axs[row,col].set_xticks([])
-            axs[row,col].set_yticks([])
-            axs[row,col].set_ylim(0,1.1*max_y)
-            axs[row,col].annotate(abbrev,[0.0,0.8], xycoords='axes fraction')
+        axs[row,col].plot(x_values[-y_values.size:],y_values)
+        axs[row,col].set_xticks([])
+        axs[row,col].set_yticks([])
+        axs[row,col].set_ylim(0,1.1*max_y)
+        axs[row,col].annotate(state,[0.0,0.8], xycoords='axes fraction')
     
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends by State (common Y-axis)')

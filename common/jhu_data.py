@@ -43,9 +43,12 @@ def get_data( max_age = 1 ):
     # No? Download new data
 
     max_weekly = 0
-    daily  = dict()  # daily totals profile indexed by state
-    weekly = dict()  # weekly totals profile indexed by state
-    total  = dict()  # total cases indexd by state
+    state_data  = dict()  # data indexed by state
+    county_data = dict()  # data indexed by state/county
+
+#    daily  = dict()  # daily totals profile indexed by state
+#    weekly = dict()  # weekly totals profile indexed by state
+#    total  = dict()  # total cases indexd by state
 
     url = '/'.join( [ "https://raw.githubusercontent.com",
                       "CSSEGISandData",
@@ -74,34 +77,51 @@ def get_data( max_age = 1 ):
         # add up all counties in state (filtering "non-states")
         for row in reader:
             state = row[6]
+
             if state not in states.us_state_abbrev: 
                 continue
-            data = np.array(row[-nraw:],dtype=int)
-            if state in daily:
-                daily[state] = np.add(daily[state], data)
-            else:
-                daily[state] = data
 
-    for state,data in daily.items():
-        total[state] = data[-1]
+            county = row[5]
+            state  = states.us_state_abbrev[state]
 
-        daily[state] = data[1:] - data[:-1]
-        daily_by_week = ( data[1:] - data[:-1] ).reshape(-1,7) # by weeks
+            raw = np.array(row[-nraw:],dtype=int)
 
-        weekly[state] = np.sum(daily_by_week,axis=1)
+            daily = raw[1:] - raw[:-1]
+            weekly = np.sum(daily.reshape(-1,7),axis=1)
 
-        t = max( weekly[state] )
-        if t > max_weekly:
-            max_weekly = t
+            if state not in state_data:
+                state_data[state] = {
+                  'total'  : 0,
+                  'daily'  : np.zeros(ndays, dtype=int),
+                  'weekly' : np.zeros(nweeks, dtype=int),
+                  }
+
+            if state not in county_data:
+                county_data[state] = dict()
+
+            if county not in county_data[state]:
+                county_data[state][county] = {
+                  'total' : 0,
+                  'daily'  : np.zeros(ndays, dtype=int),
+                  'weekly' : np.zeros(nweeks, dtype=int),
+                  }
+
+            sd = state_data[state]
+            sd['total']  = sd['total'] + raw[-1]
+            sd['daily']  = np.add(sd['daily'], daily)
+            sd['weekly'] = np.add(sd['weekly'], weekly) 
+
+            cd = county_data[state][county]
+            cd['total']  = cd['total'] + raw[-1]
+            cd['daily']  = np.add(cd['daily'], daily)
+            cd['weekly'] = np.add(cd['weekly'], weekly) 
 
     data = { 
-        'timestamp' : time.time() ,
-        'dates'     : dates,
-        'total'     : total,
-        'daily'     : daily,
-        'weeks'     : weeks,
-        'weekly'    : weekly,
-        'max'       : max_weekly,
+        'timestamp'  : time.time() ,
+        'dates'      : dates,
+        'weeks'      : weeks,
+        'state'      : state_data,
+        'county'     : county_data
         }
 
     print("Using newly downloaded data from JHU");
@@ -114,3 +134,4 @@ def get_data( max_age = 1 ):
         pass
 
     return data
+
