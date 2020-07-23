@@ -69,6 +69,8 @@ if state not in data['county']:
 
 cd = data['county'][state]
 
+timespan = "Plots cover period from {} to {}".format(dates[0],dates[-1])
+
 # Filter data
 
 ignore = [
@@ -103,7 +105,13 @@ if args['win']:
 x_values = [datetime.datetime.strptime(d,"%m/%d/%y").date() for d in dates]
 x_formatter = mdates.DateFormatter('%m/%d')
 
-timespan = "Plots cover period from {} to {}".format(dates[0],dates[-1])
+max_Y = 1.1*max_Y
+
+if args['scale'] == 'common':
+    max_Y = round(max_Y, 1-int(math.floor(math.log10(max_Y))))
+    y_span = "Plots show between 0 and {:,} new cases per day".format(int(max_Y))
+else:
+    y_span = None
 
 n = len(counties)
 nrow = math.ceil(math.sqrt(n * 0.75))
@@ -124,7 +132,7 @@ for irow in range(nrow):
         y_values = cd[county]['daily']
 
         if args['scale'] == 'by_county':
-            max_y = max(y_values)
+            max_y = 1.1*max(y_values)
         else:
             max_y = max_Y
 
@@ -140,6 +148,14 @@ axs[nrow-1,ncol-1].annotate(timespan,
         ha='right', va='bottom',
         fontsize='x-small',
         )
+
+if y_span is not None:
+    axs[nrow-1,ncol-1].annotate(y_span,
+            xy=(0,0), xycoords='figure fraction',
+            xytext=(5,5), textcoords='offset points',
+            ha='left', va='bottom',
+            fontsize='x-small',
+            )
     
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends in {} by County (common Y-axis)'.format(states.abbrev_us_state[state]))

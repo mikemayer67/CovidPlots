@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
+import math
 
 # Command Line Parser
 # 
@@ -93,6 +94,16 @@ if args['win']:
 x_values = [datetime.datetime.strptime(d,"%m/%d/%y").date() for d in dates]
 x_formatter = mdates.DateFormatter('%m/%d')
 
+max_Y = 1.1*max_Y
+
+if args['scale'] == 'common':
+    max_Y = round(max_Y, 1-int(math.floor(math.log10(max_Y))))
+    y_span = "Plots show between 0 and {:,} new cases per day".format(int(max_Y))
+elif args['scale'] == 'per_capita':
+    y_span = "Plots show between 0 and {:.1f} new cases per day per 10,000 people".format(10000*max_Y)
+else:
+    y_span = None
+
 nrow, ncol = plot_map.shape
 fig, axs = plt.subplots(nrow, ncol)
 
@@ -106,14 +117,14 @@ for row in range(nrow):
         y_values = sd[state]['daily']
 
         if args['scale'] == 'by_state':
-            max_y = max(y_values)
+            max_y = 1.1*max(y_values)
         else:
             max_y = max_Y
 
         axs[row,col].plot(x_values[-y_values.size:],y_values)
         axs[row,col].set_xticks([])
         axs[row,col].set_yticks([])
-        axs[row,col].set_ylim(0,1.1*max_y)
+        axs[row,col].set_ylim(0,max_y)
         axs[row,col].annotate(state,[0.0,0.8], xycoords='axes fraction')
     
 axs[nrow-1,ncol-1].annotate(timespan,
@@ -122,6 +133,14 @@ axs[nrow-1,ncol-1].annotate(timespan,
         ha='right', va='bottom',
         fontsize='x-small',
         )
+
+if y_span is not None:
+    axs[nrow-1,ncol-1].annotate(y_span,
+            xy=(0,0), xycoords='figure fraction',
+            xytext=(5,5), textcoords='offset points',
+            ha='left', va='bottom',
+            fontsize='x-small',
+            )
 
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends by State (common Y-axis)')
