@@ -28,8 +28,7 @@ parser = argparse.ArgumentParser(
     )
 
 parser.add_argument('-n','--average', type=int, choices=[1,2,3,4,5,6,7], default=7)
-
-parser.add_argument('-y','--scale', choices=['common','per_capita','by_state'], default='common')
+parser.add_argument('-y','--scale', choices=['common','per_capita'], default=None)
 
 output = parser.add_mutually_exclusive_group()
 output.add_argument('-o','--output', nargs=1, metavar='filename',
@@ -80,7 +79,7 @@ for state in sd.keys():
     else:
         state_data = raw
 
-    if( args['scale'] == 'per_capita' ):
+    if args['scale'] == 'per_capita':
         pop = states.abbrev_population[state]
         state_data = state_data / pop
         
@@ -116,10 +115,10 @@ for row in range(nrow):
 
         y_values = sd[state]['daily']
 
-        if args['scale'] == 'by_state':
-            max_y = 1.1*max(y_values)
-        else:
+        if args['scale']:
             max_y = max_Y
+        else:
+            max_y = 1.1*max(y_values)
 
         axs[row,col].plot(x_values[-y_values.size:],y_values)
         axs[row,col].set_xticks([])

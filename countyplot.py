@@ -13,7 +13,7 @@ import matplotlib.dates as mdates
 import datetime
 import sys
 import math
-
+import common.counties as cpop
 
 # Command Line Parser
 # 
@@ -31,12 +31,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('state')
 parser.add_argument('-n','--average', type=int, choices=[1,2,3,4,5,6,7], default=7)
-
-scale_type = parser.add_mutually_exclusive_group()
-scale_type.add_argument('-y', dest='scale', action='store_const',const='common',
-        help="Plot all counties at same scale")
-scale_type.add_argument('-Y', dest='scale', action='store_const',const='by_county',
-        help="Plot each county to fill y axis")
+parser.add_argument('-y','--scale', choices=['common','per_capita'], default=None)
 
 output = parser.add_mutually_exclusive_group()
 output.add_argument('-o','--output', nargs=1, metavar='filename',
@@ -47,7 +42,7 @@ output.add_argument('-s','--show', dest='win', action='store_true',
 parser.add_argument('-r','--reload', action='store_true',
         help = "Do not use cached data")
 
-parser.set_defaults(scale='common', win=False, reload=False)
+parser.set_defaults(win=False, reload=False)
 
 args = vars(parser.parse_args())
 
@@ -95,6 +90,10 @@ for county in counties:
     else:
         county_data = raw
 
+    if args['scale'] == 'per_capita':
+        pop = cpop.population(county,state)
+        county_data = county_data / pop
+
     cd[county]['daily'] = county_data
 
     max_Y = max(max_Y, max(county_data))
@@ -110,6 +109,8 @@ max_Y = 1.1*max_Y
 if args['scale'] == 'common':
     max_Y = round(max_Y, 1-int(math.floor(math.log10(max_Y))))
     y_span = "Plots show between 0 and {:,} new cases per day".format(int(max_Y))
+elif args['scale'] == 'per_capita':
+    y_span = "Plots show between 0 and {:.1f} new cases per day per 10,000 people".format(10000*max_Y)
 else:
     y_span = None
 
@@ -131,10 +132,10 @@ for irow in range(nrow):
 
         y_values = cd[county]['daily']
 
-        if args['scale'] == 'by_county':
-            max_y = 1.1*max(y_values)
-        else:
+        if args['scale']:
             max_y = max_Y
+        else:
+            max_y = 1.1*max(y_values)
 
         axs[irow,icol].plot(x_values[-y_values.size:],y_values)
         axs[irow,icol].set_xticks([])
@@ -159,6 +160,8 @@ if y_span is not None:
     
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends in {} by County (common Y-axis)'.format(states.abbrev_us_state[state]))
+elif args['scale'] == 'per_capita':
+    plt.suptitle('Covid-19 Trends in {} by County (per capita)'.format(states.abbrev_us_state[state]))
 else:
     plt.suptitle('Covid-19 Trends in {} by County (Y-axis normalized by County)'.format(states.abbrev_us_state[state]))
 
