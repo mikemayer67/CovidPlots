@@ -53,6 +53,8 @@ data = jhu.get_data(max_age)
 dates = data['dates']
 sd    = data['state']
 
+timespan = "Plots cover period from {} to {}".format(dates[0],dates[-1])
+
 plot_map = np.array( [
     ['AK',''  ,''  ,''  ,''  ,'WI',''  ,''  ,'VT','NH','ME'],
     ['WA','ID','MT','ND','MN','IL','MI',''  ,'NY','MA',''  ],
@@ -114,6 +116,13 @@ for row in range(nrow):
         axs[row,col].set_ylim(0,1.1*max_y)
         axs[row,col].annotate(state,[0.0,0.8], xycoords='axes fraction')
     
+axs[nrow-1,ncol-1].annotate(timespan,
+        xy=(1,0), xycoords='figure fraction',
+        xytext=(-5,5), textcoords='offset points',
+        ha='right', va='bottom',
+        fontsize='x-small',
+        )
+
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends by State (common Y-axis)')
 elif args['scale'] == 'per_capita':

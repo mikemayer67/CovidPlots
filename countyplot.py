@@ -103,6 +103,8 @@ if args['win']:
 x_values = [datetime.datetime.strptime(d,"%m/%d/%y").date() for d in dates]
 x_formatter = mdates.DateFormatter('%m/%d')
 
+timespan = "Plots cover period from {} to {}".format(dates[0],dates[-1])
+
 n = len(counties)
 nrow = math.ceil(math.sqrt(n * 0.75))
 ncol = math.ceil(n/nrow)
@@ -131,6 +133,13 @@ for irow in range(nrow):
         axs[irow,icol].set_yticks([])
         axs[irow,icol].set_ylim(0,1.1*max_y)
         axs[irow,icol].annotate(county,[0.0,0.8], xycoords='axes fraction')
+
+axs[nrow-1,ncol-1].annotate(timespan,
+        xy=(1,0), xycoords='figure fraction',
+        xytext=(-5,5), textcoords='offset points',
+        ha='right', va='bottom',
+        fontsize='x-small',
+        )
     
 if args['scale'] == 'common':
     plt.suptitle('Covid-19 Trends in {} by County (common Y-axis)'.format(states.abbrev_us_state[state]))
