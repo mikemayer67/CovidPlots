@@ -1214,7 +1214,7 @@ Talbot|Maryland|37181
 Washington|Maryland|151049
 Wicomico|Maryland|103609
 Worcester|Maryland|52276
-Baltimore|Maryland|593490
+Baltimore City|Maryland|593490
 Barnstable|Massachusetts|212990
 Berkshire|Massachusetts|124944
 Bristol|Massachusetts|565217
@@ -2922,9 +2922,9 @@ Colonial Heights|Virginia|17370
 Covington|Virginia|5538
 Danville|Virginia|40044
 Emporia|Virginia|5346
-Fairfax|Virginia|24019
+Fairfax City|Virginia|24019
 Falls Church|Virginia|14617
-Franklin|Virginia|7967
+Franklin City|Virginia|7967
 Fredericksburg|Virginia|29036
 Galax|Virginia|6347
 Hampton|Virginia|134510
@@ -2942,8 +2942,8 @@ Petersburg|Virginia|31346
 Poquoson|Virginia|12271
 Portsmouth|Virginia|94398
 Radford|Virginia|18249
-Richmond|Virginia|230436
-Roanoke|Virginia|99143
+Richmond City|Virginia|230436
+Roanoke City|Virginia|99143
 Salem|Virginia|25301
 Staunton|Virginia|24932
 Suffolk|Virginia|92108

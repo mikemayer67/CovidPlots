@@ -33,6 +33,12 @@ parser.add_argument('state')
 parser.add_argument('-n','--average', type=int, choices=[1,2,3,4,5,6,7], default=7)
 parser.add_argument('-y','--scale', choices=['common','per_capita'], default=None)
 
+data_type = parser.add_mutually_exclusive_group()
+data_type.add_argument('-D','--deaths', dest='data_type', action='store_const', const='deaths',
+        help = "Display deaths rather than confirmed cases")
+data_type.add_argument('-C','--cases', dest='data_type', action='store_const', const='confirmed',
+        help = "Display confirmed cases rather than deaths")
+    
 output = parser.add_mutually_exclusive_group()
 output.add_argument('-o','--output', nargs=1, metavar='filename',
         help = "Name of file to save generated plot")
@@ -42,7 +48,7 @@ output.add_argument('-s','--show', dest='win', action='store_true',
 parser.add_argument('-r','--reload', action='store_true',
         help = "Do not use cached data")
 
-parser.set_defaults(win=False, reload=False)
+parser.set_defaults(data_type='confirmed',win=False, reload=False)
 
 args = vars(parser.parse_args())
 
@@ -54,9 +60,10 @@ if state not in states.abbrev_us_state:
 # JHU data
 
 num_avg = args['average']
+data_type = args['data_type']
 
 max_age = 0 if args['reload'] else 1
-data = jhu.get_data(max_age)
+data = jhu.get_data(data_type,max_age)
 
 dates = data['dates']
 if state not in data['county']:
@@ -106,11 +113,16 @@ x_formatter = mdates.DateFormatter('%m/%d')
 
 max_Y = 1.1*max_Y
 
+if data_type == 'deaths':
+    plot_label = 'deaths'
+else:
+    plot_label = 'new cases'
+
 if args['scale'] == 'common':
     max_Y = round(max_Y, 1-int(math.floor(math.log10(max_Y))))
-    y_span = "Plots show between 0 and {:,} new cases per day".format(int(max_Y))
+    y_span = "Plots show between 0 and {:,} {} per day".format(int(max_Y), plot_label)
 elif args['scale'] == 'per_capita':
-    y_span = "Plots show between 0 and {:.1f} new cases per day per 10,000 people".format(10000*max_Y)
+    y_span = "Plots show between 0 and {:.1f} {} per day per 100,000 people".format(100000*max_Y, plot_label)
 else:
     y_span = None
 
@@ -159,11 +171,15 @@ if y_span is not None:
             )
     
 if args['scale'] == 'common':
-    plt.suptitle('Covid-19 Trends in {} by County (common Y-axis)'.format(states.abbrev_us_state[state]))
+    scale_type = 'common Y-axis'
 elif args['scale'] == 'per_capita':
-    plt.suptitle('Covid-19 Trends in {} by County (per capita)'.format(states.abbrev_us_state[state]))
+    scale_type = 'per capita'
 else:
-    plt.suptitle('Covid-19 Trends in {} by County (Y-axis normalized by County)'.format(states.abbrev_us_state[state]))
+    scale_type = 'Y-axis scaled by county'
+
+plot_title = 'Covid-19 {} in {} by County ({})'.format(
+        plot_label.title(), states.abbrev_us_state[state],scale_type)
+plt.suptitle(plot_title)
 
 if args['win']:
     input("Press Enter to continue...")

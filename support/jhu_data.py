@@ -15,7 +15,10 @@ import common.states as states
 
 from contextlib import closing
 
-def get_data( max_age = 1 ):
+class IncorrectURL(Exception):
+    pass
+
+def get_data( data_type, max_age):
     """
     Returns JHU data
 
@@ -31,7 +34,9 @@ def get_data( max_age = 1 ):
     now = time.time()
 
     try:
-        with open('data/jhu.np',mode='rb') as fp:
+        cache_file = 'data/jhu_{}.np'.format(data_type)
+
+        with open(cache_file,mode='rb') as fp:
             data = pickle.load(fp)
             ts = data['timestamp']
         if now < ts + 3600 * max_age:
@@ -50,20 +55,26 @@ def get_data( max_age = 1 ):
 #    weekly = dict()  # weekly totals profile indexed by state
 #    total  = dict()  # total cases indexd by state
 
+    csv_file = 'time_series_covid19_{}_US.csv'.format(data_type)
+
     url = '/'.join( [ "https://raw.githubusercontent.com",
                       "CSSEGISandData",
                       "COVID-19",
                       "master",
                       "csse_covid_19_data",
                       "csse_covid_19_time_series",
-                      "time_series_covid19_confirmed_US.csv"] )
+                      csv_file] )
 
     rq = requests.get(url,stream=True)
+
+    if rq.status_code != 200:
+        raise IncorrectURL(url)
+
     with closing(rq) as r:
         f = ( line.decode('utf-8') for line in r.iter_lines() )
         reader = csv.reader(f, delimiter=',',quotechar='"')
         columns = next(reader)
-        dates = np.array(columns[55:])  # skip roughly first 2 months of data
+        dates = np.array(columns[56:])  # skip roughly first 2 months of data
 
         # we need to ensure an extra day of data for diff
         ndays  = dates.size - 1   # make sure we have enough raw data
@@ -76,8 +87,10 @@ def get_data( max_age = 1 ):
 
         # add up all counties in state (filtering "non-states")
         for row in reader:
-            state = row[6]
+            if row[7] != 'US':
+                continue
 
+            state = row[6]
             if state not in states.us_state_abbrev: 
                 continue
 
@@ -127,7 +140,7 @@ def get_data( max_age = 1 ):
     print("Using newly downloaded data from JHU");
 
     try:
-        with open('data/jhu.np',mode='wb') as fp:
+        with open(cache_file,mode='wb') as fp:
             pickle.dump(data,fp)
     except Exception as e:
         print("Exception writing data: " + str(e));

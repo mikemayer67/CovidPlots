@@ -43,8 +43,7 @@ common_y.add_argument('-y','--commonY', dest='commonY', action='store_true',
 common_y.add_argument('-Y','--rescaleY', dest='commonY', action='store_false',
         help = "Use resscale Y axis for each state")
 
-parser.set_defaults(sort='current', reversed=False, win=False, reload=False,
-        logY=False,commonY=True)
+parser.set_defaults(logY=False, commonY=True)
 
 args = vars(parser.parse_args())
 
@@ -57,7 +56,7 @@ for state in args['states']:
 # JHU data
 
 max_age = 0 if args['reload'] else 1
-data = jhu.get_data(max_age)
+data = jhu.get_confirmed_cases(max_age)
 sd   = data['state']
 
 if len(args['states']) > 0:
