@@ -104,7 +104,7 @@ def parse_args():
         epilog = "XX in filename will be replaced with state postal code",
         help = 'Plot cases for a given state or states')
 
-    state_parser.add_argument('states',nargs=argparse.REMAINDER)
+    state_parser.add_argument('states',nargs='*')
     state_parser.add_argument(
         '-delay', default=1, metavar='sec', type=int,
         help='How long to pause between states (0=wait for enter key)')
