@@ -15,38 +15,37 @@ def plot(args):
 
     data_type = args.data_type[0]
 
-    data = jhu.get_data( data_type, args.max_age )
+    data = jhu.JHUData( args.max_age )
+    data = data[data_type]
         
-    sd = data['state']
-
     if args.sort_by == 'current':
-        states = sorted( 
-                sd, 
-                key=lambda x: sd[x]['weekly'][-1],
-                reverse = not args.sort_ascending
-                )
+        sd = data.weekly.state
     else:
-        states = sorted( 
-                sd,
-                key=lambda x: sd[x]['total'],
-                reverse = not args.sort_ascending
-                )
+        sd = data.raw.state
 
-    title = '{} (ordered by {})'.format(
-        "New COVID Cases" if data_type == 'confirmed' else 'COVID deaths' ,
+    states = sorted( 
+        sd, 
+        key=lambda x: sd[x][-1],
+        reverse = not args.sort_ascending
+    )
+
+    title = '{} {} (ordered by {})'.format(
+        "New" if args.daily else "Total",
+        "COVID Cases" if data_type == 'confirmed' else 'COVID deaths' ,
         "most recent count" if args.sort_by == 'current' else "total cases"
     )
 
-    ylabel = 'Weekly {}'.format(
-        "New Cases" if data_type == 'confirmed' else 'Deaths'
+    ylabel = '{} {}'.format(
+        "New" if args.daily else "Total",
+        "Cases" if data_type == 'confirmed' else 'Deaths'
     )
 
-    weeks = data['weeks']
+    weeks = data.weeks
 
-    if args.daily:
-        cases = [ sd[state]['weekly'] for state in states ]
-    else:
-        cases = [ np.cumsum(sd[state]['weekly']) for state in states ]
+    cases = [ data.weekly.state[state] for state in states ]
+
+    if not args.daily:
+        cases = [ np.cumsum(x) for x in cases ]
 
     if args.show:
         plt.ion()

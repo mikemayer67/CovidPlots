@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import common.states as states
+import support.states as states
 
 counties = {}
 

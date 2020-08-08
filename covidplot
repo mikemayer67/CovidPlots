@@ -10,9 +10,9 @@ import sys
 args = support.args.Args()
 
 try:
-    module = importlib.import_module('support.' + args.action)
+    module = importlib.import_module('plotters.' + args.action)
 except:
-    print("\nNeed to implement support." + args.action + "\n")
+    print("\nNeed to implement plotters." + args.action + "\n")
     sys.exit(1)
 
 module.plot(args)

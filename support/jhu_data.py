@@ -11,59 +11,152 @@ import requests
 import csv
 import pickle
 import time
-import common.states as states
+import support.states as states
+import support.counties as counties
 
 from contextlib import closing
 
 class IncorrectURL(Exception):
     pass
 
-def get_data( data_type, max_age):
-    """
-    Returns JHU data
+class JHUData(dict):
+    def __init__(self,max_age=None):
+        data = cached_data(max_age)
 
-    If cached data is available and isn't too old, it will be returned.
-    Otherwise, the data will be retrieved from the JHU github repository.
+        if data == None:
+            data = { k : download_data(k) for k in ['deaths','confirmed'] }
+            cache_data(data)
 
-    Arguments:
-       max_age:  maximum age in hours before cached data "expires" [default = 1]
-    """
+        for k,v in data.items():
+            self[k] = v
 
-    # return cached data if available
+    def __getattr__(self,k):
+        if hasattr(self,k):
+            return self[k]
+        else:
+            return None
 
+    def get_state_data(self,
+                       state,
+                       data_type='confirmed',
+                       frequency=None,
+                       smooth=None,
+                       yscale=None):
+        if isinstance(data_type,list):
+            rval = dict()
+            for dt in data_type:
+                rval[dt] = self.get_state_data(
+                    state, data_type=dt, frequency=frequency, smooth=smooth, yscale=yscale)
+
+        else:
+            rval = self[data_type]
+            if frequency=='daily':
+                rval = rval.daily.state[state]
+            elif frequency=='weekly':
+                rval = rval.weekly.state[state]
+            else:
+                rval = rval.raw.state[state]
+
+            if smooth and smooth>1:
+                c = np.ones(smooth)/smooth
+                rval = np.convolve(rval, c, mode='valid')
+
+            if yscale == 'per_capita':
+                pop = states.abbrev_population[state]
+                rval /= pop
+
+        return rval
+
+    def get_dates(self, 
+                  data_type='confirmed',
+                  frequency=None,
+                  smooth=None):
+
+        if isinstance(data_type,list):
+            rval = dict()
+            for dt in data_type:
+                rval[dt] = self.get_dates(
+                    data_type=dt, frequency=frequency, smooth=smooth)
+
+        else:
+            if frequency=='daily':
+                rval = self[data_type].dates[1:]
+            elif frequency=='weekly':
+                rval = self[data_type].weeks
+            else:
+                rval = self[data_type].dates
+
+            if smooth and smooth>1:
+                rval = rval[smooth-1:]
+
+        return rval
+
+
+
+class StateData(dict):
+    def add(self,state, data):
+        if state not in self.keys():
+            self[state] = data
+        else:
+            self[state] = np.add(self[state],data)
+
+class CountyData(dict):
+    def add(self,state,county,data):
+        if state not in self.keys():
+            self[state] = dict()
+        self[state][county] = data
+
+class RegionalData:
+    def __init__(self):
+        self.state  = StateData()
+        self.county = CountyData()
+
+class DataSet:
+    def __init__(self,dates):
+        ndays  = dates.size - 1
+        nweeks = int(ndays/7)
+
+        self.dates  = dates
+        self.weeks  = dates[-7*nweeks + 6 : : 7]
+
+        self.raw    = RegionalData()
+        self.daily  = RegionalData()
+        self.weekly = RegionalData()
+
+def cached_data(max_age):
     now = time.time()
-
     try:
-        cache_file = 'data/jhu_{}.np'.format(data_type)
+        data = pickle.load(open('data/jhu.np','rb'))
+        ts = data['timestamp']
+        if now < ts + max_age:
+            print("Using cached data from JHU downloaded at " + time.ctime(ts))
+        else:
+            data = None
+    except Exception as x:
+        data = None
 
-        with open(cache_file,mode='rb') as fp:
-            data = pickle.load(fp)
-            ts = data['timestamp']
-        if now < ts + 3600 * max_age:
-            print("Using cached data from download at " + time.ctime(ts))
-            return data
-    except Exception as e:
+    return data
+
+def cache_data(data):
+    try:
+        data['timestamp'] = time.time()
+        pickle.dump(data,open('data/jhu.np','wb'))
+        print("Data cached to data/jhu.np for future use")
+    except:
+        print("Failed to cache data for future use")
         pass
 
-    # No? Download new data
 
-    max_weekly = 0
-    state_data  = dict()  # data indexed by state
-    county_data = dict()  # data indexed by state/county
+def download_data(data_type):
 
-#    daily  = dict()  # daily totals profile indexed by state
-#    weekly = dict()  # weekly totals profile indexed by state
-#    total  = dict()  # total cases indexd by state
-
-    csv_file = 'time_series_covid19_{}_US.csv'.format(data_type)
-
-    url = '/'.join( [ "https://raw.githubusercontent.com",
-                      "CSSEGISandData",
-                      "COVID-19",
-                      "master",
-                      "csse_covid_19_data",
-                      "csse_covid_19_time_series",
-                      csv_file] )
+    url = '/'.join( ['https://raw.githubusercontent.com',
+                     'CSSEGISandData',
+                     'COVID-19',
+                     'master',
+                     'csse_covid_19_data',
+                     'csse_covid_19_time_series',
+                     '_'.join([ 'time_series_covid19',data_type,'US.csv'])
+                    ])
 
     rq = requests.get(url,stream=True)
 
@@ -76,16 +169,12 @@ def get_data( data_type, max_age):
         columns = next(reader)
         dates = np.array(columns[56:])  # skip roughly first 2 months of data
 
-        # we need to ensure an extra day of data for diff
-        ndays  = dates.size - 1   # make sure we have enough raw data
-        nweeks = int( ndays / 7 )
-        ndays  = 7 * nweeks
-        nraw   = ndays + 1
+        nraw   = dates.size
+        ndays  = dates.size - 1
+        nweeks = int(ndays/7)
 
-        # strip down dates to 1 per week
-        weeks = dates[-ndays:].reshape(-1,7)[:,6]
+        data = DataSet(dates)
 
-        # add up all counties in state (filtering "non-states")
         for row in reader:
             if row[7] != 'US':
                 continue
@@ -94,57 +183,25 @@ def get_data( data_type, max_age):
             if state not in states.us_state_abbrev: 
                 continue
 
-            county = row[5]
             state  = states.us_state_abbrev[state]
+            county = row[5]
 
-            raw = np.array(row[-nraw:],dtype=int)
-
+            raw   = np.array(row[-nraw:],dtype=int)
             daily = raw[1:] - raw[:-1]
-            weekly = np.sum(daily.reshape(-1,7),axis=1)
 
-            if state not in state_data:
-                state_data[state] = {
-                  'total'  : 0,
-                  'daily'  : np.zeros(ndays, dtype=int),
-                  'weekly' : np.zeros(nweeks, dtype=int),
-                  }
+            weekly = raw[-1-7*nweeks::7]
+            weekly = weekly[1:] - weekly[:-1]
 
-            if state not in county_data:
-                county_data[state] = dict()
+            data.raw.state.add(state,raw)
+            data.raw.county.add(state,county,raw)
 
-            if county not in county_data[state]:
-                county_data[state][county] = {
-                  'total' : 0,
-                  'daily'  : np.zeros(ndays, dtype=int),
-                  'weekly' : np.zeros(nweeks, dtype=int),
-                  }
+            data.daily.state.add(state,daily)
+            data.daily.county.add(state,county,daily)
 
-            sd = state_data[state]
-            sd['total']  = sd['total'] + raw[-1]
-            sd['daily']  = np.add(sd['daily'], daily)
-            sd['weekly'] = np.add(sd['weekly'], weekly) 
+            data.weekly.state.add(state,weekly)
+            data.weekly.county.add(state,county,weekly)
 
-            cd = county_data[state][county]
-            cd['total']  = cd['total'] + raw[-1]
-            cd['daily']  = np.add(cd['daily'], daily)
-            cd['weekly'] = np.add(cd['weekly'], weekly) 
-
-    data = { 
-        'timestamp'  : time.time() ,
-        'dates'      : dates,
-        'weeks'      : weeks,
-        'state'      : state_data,
-        'county'     : county_data
-        }
-
-    print("Using newly downloaded data from JHU");
-
-    try:
-        with open(cache_file,mode='wb') as fp:
-            pickle.dump(data,fp)
-    except Exception as e:
-        print("Exception writing data: " + str(e));
-        pass
+    print("Using newly downloaded " + data_type + " data from JHU");
 
     return data
 

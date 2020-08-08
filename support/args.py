@@ -11,8 +11,34 @@ import support.states as states
 class Args:
     def __init__(self):
         args = vars(parse_args())
+
         for k,v in args.items():
             setattr(self,k,v)
+
+        if self.data_type == None:
+            self.data_type = ['confirmed']
+
+        self.save = True if (self.saveas or self.saveas is None) else False
+
+        if not self.save:
+            self.show = True
+
+        if hasattr(self,'state'):
+            self.state = self.state.upper()
+            if self.state not in states.abbrev_us_state.keys():
+                print("\nUnrecognized state code: " + self.state + "\n")
+                sys.exit(1)
+
+        if hasattr(self,'states'):
+            state_keys = states.abbrev_us_state.keys()
+            if len(self.states) < 1:
+                self.states = list(state_keys)
+            else:
+                self.states = [x.upper() for x in self.states]
+                for state in self.states:
+                    if state not in state_keys:
+                        print("\nUnrecognized state code: " + state + "\n")
+                        sys.exit(1)
 
 
     def filename(self, data_type=None, state=None):
@@ -38,7 +64,7 @@ class Args:
             if state is not None:
                 rval = rval + '_' + state
 
-            if hasattr(self,'yscale'):
+            if self.yscale is not None:
                 rval = rval + '_' + self.yscale
 
             rval = rval + '.png'
@@ -72,53 +98,31 @@ def parse_args():
         parents = [common, sort],
         help = 'Stack all states data on one nplot')
 
-    map_parser    = subparsers.add_parser(
-        'map',
-        parents = [common, yscale],
-        help = 'Plot array of state plots in pseudo US map')
-
     state_parser  = subparsers.add_parser(
-        'state',
+        'states',
         parents = [common, yscale, sort],
         epilog = "XX in filename will be replaced with state postal code",
         help = 'Plot cases for a given state or states')
 
     state_parser.add_argument('states',nargs=argparse.REMAINDER)
+    state_parser.add_argument(
+        '-delay', default=1, metavar='sec', type=int,
+        help='How long to pause between states (0=wait for enter key)')
 
     county_parser = subparsers.add_parser(
-        'county',
+        'counties',
         parents = [common, yscale],
         epilog = "XX in filename will be replaced with state postal code",
         help = 'Plot array of county plots for specified state')
 
+    map_parser    = subparsers.add_parser(
+        'map',
+        parents = [common, yscale],
+        help = 'Plot array of state plots in pseudo US map')
+
     county_parser.add_argument('state')
 
-    args = parser.parse_args()
-
-# Adjust args
-
-    if args.data_type == None:
-        args.data_type = ['confirmed']
-
-    args.save = True if (args.saveas or args.saveas is None) else False
-
-    if not args.save:
-        args.show = True
-
-    if hasattr(args,'state'):
-        args.state = args.state.upper()
-        if args.state not in states.abbrev_us_state.keys():
-            print("\nUnrecognized state code: " + args.state + "\n")
-            sys.exit(1)
-
-    if hasattr(args,'states'):
-        args.states = [x.upper() for x in args.states]
-        for state in args.states:
-            if state not in states.apprev_us_state_keys():
-                print("\nUnrecognized state code: " + args.state + "\n")
-                sys.exit(1)
-
-    return args
+    return parser.parse_args()
 
 
 def common_args():
