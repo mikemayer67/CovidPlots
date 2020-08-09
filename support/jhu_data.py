@@ -6,13 +6,14 @@ This file can be imported and contains the following functions:
     * get_data:  Return JHU data
 """
 
-import numpy as np
-import requests
 import csv
+import numpy as np
 import pickle
-import time
-import support.states as states
+import re
+import requests
 import support.counties as counties
+import support.states as states
+import time
 
 from contextlib import closing
 
@@ -64,6 +65,49 @@ class JHUData(dict):
             if yscale == 'per_capita':
                 pop = states.abbrev_population[state]
                 rval /= pop
+
+        return rval
+
+    def get_county_data(self,
+                        state,
+                        data_type='confirmed',
+                        frequency=None,
+                        smooth=None,
+                        yscale=None):
+        is_list = isinstance(data_type,list)
+
+        if not is_list:
+            data_type = [data_type]
+
+        rval = dict()
+
+        for dt in data_type:
+            if frequency=='daily':
+                cd = self[dt].daily.county[state]
+            elif frequency=='weekly':
+                cd = self[dt].weekly.county[state]
+            else:
+                cd = self[dt].raw.county[state]
+
+            for county,data in cd.items():
+                if re.match('^Out of',county) or county == 'Unassigned':
+                    continue
+
+                if smooth and smooth>1:
+                    c = np.ones(smooth)/smooth
+                    data = np.convolve(data, c, mode='valid')
+
+                if yscale == 'per_capita':
+                    pop = counties.population(county,state)
+                    data /= pop
+
+                if county in rval.keys():
+                    rval[county][dt] = data
+                elif is_list:
+                    rval[county] = dict()
+                    rval[county][dt] = data
+                else:
+                    rval[county] = data
 
         return rval
 
