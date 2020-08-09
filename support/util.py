@@ -14,11 +14,39 @@ from datetime import datetime
 def x_values(dates):
     """
     Converts a list of date strings to datetime dates
+
+    If multiplt lists are provided (via dict), the conversion will
+    be applied to all lists and returned in a dictionary with the
+    same keys as the input dictionary
     """
     if isinstance(dates,dict):
         return { k:x_values(v) for k,v in dates.items() }
     else:
         return [ datetime.strptime(d,"%m/%d/%y").date() for d in dates ]
+
+def timespan(dates):
+    """
+    Converts a list of date strings to a timespan
+
+    If multiplt lists are provided (via dict), the returned timespan
+    will be based on the union of the lists
+    """
+    if isinstance(dates,dict):
+        rval = [
+            min( [ datetime.strptime(d[ 0],"%m/%d/%y").date() for d in dates.values() ] ),
+            max( [ datetime.strptime(d[-1],"%m/%d/%y").date() for d in dates.values() ] )
+        ]
+
+    else:
+        rval = [
+            datetime.strptime(dates[ 0],"%m/%d/%y").date(),
+            datetime.strptime(dates[-1],"%m/%d/%y").date(),
+        ]
+
+    rval = [ dt.strftime("%d-%b-%y") for dt in rval ]
+
+    return rval
+
 
 def y_ticks(max_y):
     """

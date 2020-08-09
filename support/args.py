@@ -9,8 +9,8 @@ import sys
 import support.states as states
 
 class Args:
-    def __init__(self):
-        args = vars(parse_args())
+    def __init__(self,arg_list=[]):
+        args = vars(parse_args(arg_list))
 
         for k,v in args.items():
             setattr(self,k,v)
@@ -78,7 +78,7 @@ class Args:
 # Free functions (not part of Args class)
 ########################################
 
-def parse_args():
+def parse_args(args):
 
     parser = argparse.ArgumentParser(
         description="Plots COVID cases in the JHU database in a pseudo-US map",
@@ -98,13 +98,20 @@ def parse_args():
         parents = [common, sort],
         help = 'Stack all states data on one nplot')
 
+    stack_parser.add_argument(
+        '-sort', dest='sort_by', metavar='?',
+        choices=['current','total'], 
+        help = "Count used to order states: current or total")
+
     state_parser  = subparsers.add_parser(
         'states',
         parents = [common, yscale, sort],
         epilog = "XX in filename will be replaced with state postal code",
         help = 'Plot cases for a given state or states')
 
-    state_parser.add_argument('states',nargs='*')
+    state_parser.add_argument(
+        'states',nargs='*', metavar='state',
+        help = 'State to plot (may be specified multiple times)')
     state_parser.add_argument(
         '-delay', default=1, metavar='sec', type=int,
         help='How long to pause between states (0=wait for enter key)')
@@ -122,7 +129,10 @@ def parse_args():
 
     county_parser.add_argument('state')
 
-    return parser.parse_args()
+    if len(args) > 0:
+        return parser.parse_args(args)
+    else:
+        return parser.parse_args()
 
 
 def common_args():
@@ -186,10 +196,6 @@ def sort_args():
 
     parser = argparse.ArgumentParser(add_help = False)
 
-    parser.add_argument(
-        '-sort', dest='sort_by', metavar='?',
-        choices=['current','total'], 
-        help = "Count used to order states: current or total")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '-ascending', dest='sort_ascending',

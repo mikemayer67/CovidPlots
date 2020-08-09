@@ -18,18 +18,17 @@ def plot(args):
     states = args.states
 
     plot_confirmed = 'confirmed' in args.data_type
-    plot_deaths    = 'deaths'    in args.data_type
 
-    dt = 'confirmed' if plot_confirmed else 'deaths'
-    sort_data = jhu_data[dt]
-    sort_data = sort_data.daily if args.sort_by == 'current' else sort_data.raw
-    sort_data = { state:sort_data.state[state] for state in states }
-
-    states = sorted(
-        states,
-        key = lambda state: sort_data[state][-1],
-        reverse = not args.sort_ascending
-    )
+    if args.show:
+        sort_data = jhu_data['confirmed' if plot_confirmed else 'deaths']
+        sort_data = sort_data.daily.state if args.daily else sort_data.raw.state
+        states = sorted(
+            states,
+            key = lambda state: sort_data[state][-1],
+            reverse = not args.sort_ascending
+        )
+    else:
+        states = sorted(states)
 
     frequency = 'daily' if args.daily else 'raw'
     data = dict()
