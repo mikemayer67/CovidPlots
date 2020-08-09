@@ -1,6 +1,6 @@
 *.pyc
 jhu.np
 plots
-.ipynb*
+*.ipynb
 
 data/jhu*.np
