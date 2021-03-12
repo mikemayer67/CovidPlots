@@ -80,6 +80,10 @@ def plot(args):
                 axs[row,col].axis('off')
                 continue
 
+            state_total = jhu_data.get_state_current_total(state)
+            state_pop   = sst.abbrev_population[state]
+            current_pct = 100.*state_total/state_pop
+
             if args.yscale is None:
                 max_y = max( [ max(data[state][dt]) for dt in args.data_type ] )
                 y_ticks, yscale = su.y_ticks(max_y)
@@ -93,7 +97,9 @@ def plot(args):
                 axs[row,col].set_ylim(0,1.1*max_y*yscale)
                 axs[row,col].set_xticks([])
                 axs[row,col].set_yticks([])
-                axs[row,col].annotate(state,[0.0,0.8], xycoords='axes fraction')
+                label = f'{state} ({current_pct:.1f}%)'
+                axs[row,col].annotate(label,[0.05,0.85], xycoords='axes fraction',
+                                     fontsize=7.5)
 
     plt.suptitle(title)
 

@@ -7,6 +7,8 @@ import support.jhu_data as jhu
 import matplotlib.pyplot as plt
 import numpy as np
 
+import support.states as sst
+
 def plot(args):
 
     if len(args.data_type) > 1:
@@ -50,12 +52,21 @@ def plot(args):
     if args.show:
         plt.ion()
 
+    fig = plt.figure(figsize=(12,8))
+    fig.add_subplot(1,1,1)
+
     plt.stackplot(weeks,cases)
     plt.legend(states,loc='upper left',ncol=2,fontsize='xx-small')
     plt.xticks(rotation=-90)
     plt.xlabel("Week")
     plt.ylabel(ylabel)
-    plt.gca().set_title(title)
+    plt.title(title)
+
+    if not args.daily:
+        yl = [ 100*x/sst.us_population for x in plt.gca().get_ylim() ]
+        ax2 = plt.twinx()
+        plt.ylim(yl)
+        ax2.yaxis.set_major_formatter(lambda x,_: f'{x:.1f}%')
 
     if args.save:
         plt.gcf().set_size_inches(12,8)

@@ -68,6 +68,9 @@ class JHUData(dict):
 
         return rval
 
+    def get_state_current_total(self,state):
+        return self['confirmed'].raw.state[state][-1]
+
     def get_county_data(self,
                         state,
                         data_type='confirmed',

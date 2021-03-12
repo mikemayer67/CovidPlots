@@ -125,3 +125,5 @@ us_state_population = {
 }
 
 abbrev_population = { us_state_abbrev[k]:v for (k,v) in us_state_population.items() }
+
+us_population = sum((v for (_,v) in us_state_population.items()))

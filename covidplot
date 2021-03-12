@@ -4,13 +4,17 @@ Plot generator for Covid data from Johns Hopkins
 """
 
 import support.args
-import importlib
 import sys
+
+from importlib import import_module
 
 args = support.args.Args()
 
+assert args.action != None, "No plot type specified"
+
 try:
-    module = importlib.import_module('plotters.' + args.action)
+    module_path = f'plotters.{args.action}'
+    module = import_module(module_path)
 except:
     print("\nNeed to implement plotters." + args.action + "\n")
     sys.exit(1)

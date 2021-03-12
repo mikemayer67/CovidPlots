@@ -1,0 +1,15 @@
+covidplot stack -save
+covidplot stack -save -death
+covidplot stack -save -total
+covidplot map -save
+covidplot map -save -percapita
+covidplot map -save -common
+covidplot counties MD -save
+covidplot counties MD -save -perc
+covidplot counties MD -save -common
+covidplot counties IL -save
+covidplot counties IL -save -perc
+covidplot counties IL -save -common
+covidplot counties AZ -save
+covidplot counties AZ -save -perc
+covidplot counties AZ -save -common

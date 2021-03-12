@@ -10,10 +10,15 @@ import support.states as states
 
 class Args:
     def __init__(self,arg_list=[]):
+
+        self.data_type = None
+        self.saveas = None
+
         args = vars(parse_args(arg_list))
 
         for k,v in args.items():
             setattr(self,k,v)
+            
 
         if self.data_type == None:
             self.data_type = ['confirmed']
@@ -61,10 +66,13 @@ class Args:
 
             rval = 'covid_{}_{}_{}'.format(tm,self.action,data_type)
 
+            if not self.daily:
+                rval = rval + '_total'
+
             if state is not None:
                 rval = rval + '_' + state
 
-            if self.yscale is not None:
+            if hasattr(self,'yscale') and self.yscale is not None:
                 rval = rval + '_' + self.yscale
 
             rval = rval + '.png'
