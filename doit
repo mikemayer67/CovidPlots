@@ -1,9 +1,14 @@
 covidplot stack -save
 covidplot stack -save -death
 covidplot stack -save -total
+covidplot stack -save -death -total
 covidplot map -save
 covidplot map -save -percapita
 covidplot map -save -common
+covidplot states MD -smooth 7 -save
+covidplot states IL -smooth 7 -save
+covidplot states AZ -smooth 7 -save
+covidplot states VA -smooth 7 -save
 covidplot counties MD -save
 covidplot counties MD -save -perc
 covidplot counties MD -save -common
@@ -13,3 +18,6 @@ covidplot counties IL -save -common
 covidplot counties AZ -save
 covidplot counties AZ -save -perc
 covidplot counties AZ -save -common
+covidplot counties VA -save
+covidplot counties VA -save -perc
+covidplot counties VA -save -common
